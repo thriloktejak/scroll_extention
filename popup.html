@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Auto Scroll</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 220px;
+      padding: 10px;
+    }
+    label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .on {
+      background-color: #16a34a;
+      color: white;
+    }
+    .off {
+      background-color: #dc2626;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <label for="intervalInput">Scroll interval (seconds)</label>
+  <input id="intervalInput" type="number" min="5" step="5" />
+
+  <button id="toggleBtn">Loading...</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>
