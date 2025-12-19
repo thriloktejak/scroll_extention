@@ -8,7 +8,9 @@ if (window.__autoScrollInitialized) {
   let scrollIntervalId = null
   let autoScrollEnabled = true
   let alertHandledOnce = false
-  let scrollIntervalMs = 30_000 // default 30s
+  let scrollIntervalMs = 30000 // 30s default
+
+  /* ------------------ SCROLL LOGIC ------------------ */
 
   function scrollUpDown(reason) {
     console.log(`[AutoScroll] ACTION (${reason}): Scroll UP`)
@@ -45,26 +47,71 @@ if (window.__autoScrollInitialized) {
     startPeriodicScroll()
   }
 
-  function detectTelusAlert() {
-    const overlay = document.getElementById('telus-productivity-alert-overlay')
-    const iframe = document.getElementById('telus-productivity-alert-host')
+  /* ------------------ TELUS PAUSE DETECTION ------------------ */
 
-    if (overlay && iframe && !alertHandledOnce) {
-      alertHandledOnce = true
-      console.log('[AutoScroll] 🚨 Telus alert detected')
-      scrollUpDown('telus-alert')
+  function detectTelusPause() {
+    const overlay = document.getElementById(
+      'telus-productivity-alert-overlay'
+    )
+    const iframe = document.getElementById(
+      'telus-productivity-alert-host'
+    )
+
+    if (!overlay || !iframe) {
+      // reset when pause UI disappears
+      if (alertHandledOnce) {
+        alertHandledOnce = false
+        console.log('[AutoScroll] TELUS resumed')
+      }
+      return
+    }
+
+    try {
+      const doc =
+        iframe.contentDocument || iframe.contentWindow?.document
+      if (!doc) return
+
+      const root = doc.querySelector(
+        '#telus-productivity-alert-root'
+      )
+
+      if (
+  root &&
+  root.getAttribute('data-alert-id') === 'idle-timeout'
+) {
+  if (!alertHandledOnce) {
+    alertHandledOnce = true
+    console.log(
+      '[AutoScroll] 🚨 TELUS SESSION PAUSED (idle-timeout)'
+    )
+
+    // 👇 PERFORM SCROLL WHEN PAUSE IS DETECTED
+    scrollUpDown('telus-paused')
+  }
+}
+
+    } catch {
+      // iframe not ready yet — safe to ignore
     }
   }
 
   function observeAlert() {
-    const observer = new MutationObserver(detectTelusAlert)
+    // immediate check (handles already-present overlay)
+    detectTelusPause()
+
+    // DOM mutation observer
+    const observer = new MutationObserver(detectTelusPause)
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true
     })
+
+    // backup polling (handles iframe reuse / no DOM mutation)
+    setInterval(detectTelusPause, 2000)
   }
 
-  // Messages from popup
+  /* ------------------ MESSAGES FROM POPUP ------------------ */
+
   chrome.runtime.onMessage.addListener(msg => {
     if (msg.type === 'TOGGLE_SCROLL') {
       autoScrollEnabled = msg.enabled
@@ -79,6 +126,8 @@ if (window.__autoScrollInitialized) {
       if (autoScrollEnabled) restartPeriodicScroll()
     }
   })
+
+  /* ------------------ INIT ------------------ */
 
   function init() {
     chrome.storage.local.get(
